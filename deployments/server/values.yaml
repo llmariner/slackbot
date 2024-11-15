@@ -1,0 +1,149 @@
+# Default values for slackbot-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# +docs:section=Server
+
+# The LLMariner API endpoint.
+# This URL is used to send a chat completion request
+llmarinerBaseUrl: http://kong-proxy.kong/v1
+
+# The modle ID used for chat completion.
+modelId: google-gemma-2b-it-q4_0
+
+# Specify the Secret that contains the Slack token. The Deployment
+# reads this secret and sets it as a environment value.
+slackTokenSecret:
+  # The secret name.
+  name: slackbot
+  # The key name where the token is stored.
+  key: token
+
+# Specify the Secret that contains the Slack app token. The Deployment
+# reads this secret and sets it as a environment value.
+slackAppTokenSecret:
+  # The secret name.
+  name: slackbot
+  # The key name where the app token is stored.
+  key: appToken
+
+# Specify the Secret that contains the LLMariner API key. The Deployment
+# reads this secret and sets it as a environment value.
+llmarinerApiKeySecret:
+  # The secret name.
+  name: slackbot
+  # The key name where the API key is stored.
+  key: llmarinerApiKey
+
+# Override the "slackbot-server.fullname" value. This value is used as part of
+# most of the names of the resources created by this Helm chart.
+# +docs:property
+# fullnameOverride: "my-slackbot-server"
+
+# Override the "slackbot-server.name" value, which is used to annotate some of
+# the resources that are created by this Chart (using "app.kubernetes.io/name").
+# +docs:property
+# nameOverride: "my-slackbot-server"
+
+# The number of replicas for the slackbot-server Deployment.
+# +docs:type=number
+replicaCount: 1
+
+# The container image of slackbot-server.
+image:
+  # The container image name.
+  repository: public.ecr.aws/cloudnatix/llmariner/slackbot-server
+  # Kubernetes imagePullPolicy on Deployment.
+  pullPolicy: IfNotPresent
+
+# Override the container image tag to deploy by setting this variable.
+# If no value is set, the chart's appVersion will be used.
+# +docs:property
+# version: vX.Y.Z
+
+# Optional additional annotations to add to the Deployment Pods.
+# +docs:property
+# podAnnotations: {}
+
+# The nodeSelector on Pods tells Kubernetes to schedule Pods on the
+# nodes with matching labels.
+# For more information, see [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/).
+# +docs:property
+# nodeSelector: {}
+
+# A Kubernetes Affinity, if required.
+# For more information, see [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node).
+#
+# For example:
+#   affinity:
+#     nodeAffinity:
+#      requiredDuringSchedulingIgnoredDuringExecution:
+#        nodeSelectorTerms:
+#        - matchExpressions:
+#          - key: foo.bar.com/role
+#            operator: In
+#            values:
+#            - master
+#
+# +docs:property
+# affinity: {}
+
+# A list of Kubernetes Tolerations, if required.
+# For more information, see [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+#
+# For example:
+#   tolerations:
+#   - key: foo.bar.com/role
+#     operator: Equal
+#     value: master
+#     effect: NoSchedule
+#
+# +docs:property
+# tolerations: []
+
+# Resources to provide to the slackbot-server pod.
+# For more information, see [Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-Containers/).
+#
+# For example:
+#  requests:
+#    cpu: 10m
+#    memory: 32Mi
+#
+# +docs:property
+resources:
+  requests:
+    cpu: "250m"
+    memory: "500Mi"
+  limits:
+    cpu: "250m"
+
+# Security Context for the slackbot-server pod.
+# For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+# +docs:property
+podSecurityContext:
+  fsGroup: 2000
+
+# Security Context for the slackbot-server container.
+# For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+# +docs:property
+securityContext:
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Additional volumes to add to the slackbot-server pod.
+# +docs:property
+# volumes: []
+
+# Additional volume mounts to add to the slackbot-server container.
+# +docs:property
+# volumeMounts: []
+
+# This field can be used as a condition when using it as a dependency.
+# This definition is only here as a placeholder such that it is
+# included in the json schema.
+# +docs:hidden
+enable: true
