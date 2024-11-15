@@ -1,0 +1,98 @@
+name: CI-post-merge
+on:
+  push:
+    branches:
+    - main
+
+permissions:
+  # This is necessary for AWS credentials. See:
+  # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
+  id-token: write
+  contents: write
+
+jobs:
+
+  re-test:
+    outputs:
+      release_commit: ${{ startsWith(github.event.head_commit.message, 'Release v') }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.23
+    - name: Re-test
+      run: make test
+
+  publish-latest-image-only:
+    if: needs.re-test.outputs.release_commit == 'false'
+    needs: re-test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::803339316953:role/github-actions-ecr-push-llmariners
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: public
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build and publish server docker image
+      uses: docker/build-push-action@v6
+      with:
+        file: ./build/server/Dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: |
+          public.ecr.aws/cloudnatix/llmariner/slackbot-server:latest
+
+  release-image-and-chart:
+    if: needs.re-test.outputs.release_commit == 'true'
+    needs: re-test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Extract version
+      run: |
+        ver=$(echo "$COMMIT_MESSAGE"| head -n1 | awk '{print $2}' |sed 's/v//')
+        echo "version=${ver}" >> $GITHUB_ENV
+      env:
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::803339316953:role/github-actions-ecr-push-llmariners
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: public
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build and publish server docker image
+      uses: docker/build-push-action@v6
+      with:
+        file: ./build/server/Dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: |
+          public.ecr.aws/cloudnatix/llmariner/slackbot-server:${{ env.version }}
+          public.ecr.aws/cloudnatix/llmariner/slackbot-server:latest
+    - name: Set up Helm
+      uses: Azure/setup-helm@v4
+    - name: Build and publish slackbot-server helm chart
+      run: |
+        helm package --version ${{ env.version }} ./deployments/server
+        helm push slackbot-server-${{ env.version }}.tgz oci://public.ecr.aws/cloudnatix/llmariner-charts
+    - name: Create release
+      uses: softprops/action-gh-release@v2.0.8
+      with:
+        tag_name: v${{ env.version }}
+        generate_release_notes: true
