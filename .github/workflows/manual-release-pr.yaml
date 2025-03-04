@@ -1,7 +1,16 @@
-name: manual-create-pull-request
+name: manual-release-pr
 on:
   workflow_dispatch:
     inputs:
+      default_bump:
+        description: "default bump version type (default: minor version)"
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
       custom_tag:
         description: "OPTIONAL: new version (e.g., 0.23.1) (default: bump minor version)"
 
@@ -18,7 +27,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         custom_tag: ${{ github.event.inputs.custom_tag }}
-        default_bump: minor
+        default_bump: ${{ github.event.inputs.default_bump }}
         dry_run: true
     - name: Update versions
       run: ./hack/update-chart-version.sh ${{ steps.tag_version.outputs.new_version }}
@@ -30,5 +39,5 @@ jobs:
         add-paths: deployments/*/Chart.yaml
         branch: release-${{ steps.tag_version.outputs.new_tag }}
         reviewers: ${{ github.actor }}
-        body: This pull-request is created by `manual workflow` by ${{ github.actor }}
+        body: This pull-request is created by `${{ github.workflow }}` by ${{ github.actor }}
         author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
